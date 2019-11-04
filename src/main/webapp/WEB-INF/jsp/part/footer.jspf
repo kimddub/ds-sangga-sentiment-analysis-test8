@@ -1,0 +1,338 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8"%>
+<%@ page import="java.util.*"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn"%>
+
+<style>
+	
+	
+	div.title-section {
+		margin-top:150px;
+	  width: 100%;
+	  display: flex;
+	  align-items: center;
+	}
+	.title {
+	  text-align:center;
+	  font-size: 20px;
+	  width: 20%;
+	}
+	.line {
+	  display: inline-block;
+	  width: 38%;
+	  height: 2px;
+	  background-color: #000;
+	}
+	.dot {
+	  display: inline-block;
+	  width: 10px;
+	  height: 10px;
+	  background-color: #000;
+	  border-radius: 50%;
+	  margin: 0 10px;
+	  align-items: center;
+	}
+	
+	.rank-line {
+		margin:15px auto;
+	}
+	
+	.rank-line:first-of-type {
+		margin-top:30px;
+	}
+	
+	.rank-line:nth-of-type(2n+1) {
+		background-color:#ebf0fa;
+	}
+	
+	.rank-line{
+		font-weight:bold;
+		font-size:20px;
+		color:#003366;
+	}
+	
+	.rank-line .rank {
+/* 		background-color:#003366; */
+/* 		border-radius:50%; */
+		padding:0 5px;
+	}
+	
+</style>
+
+<script>
+	getKeywordRank();
+	function getKeywordRank() {
+		
+		$.post(
+			"/api/get/json/keywordRank",
+			function(data) {
+
+				var chart = $('#rank-chart');
+
+				$.each(data, function(index, item){ 
+					chart.append(`<div class="rank-line">
+									<span class="rank">` + (index + 1) + `</span> 
+									<span class="keyword" id="rank` + index + `">` + item.keyword + `</span> 
+									<span id="rank` + index + `"> - ` + item.score + `</span> 
+								</div>`);
+				});
+
+			},
+			"json"
+		).done(function() {
+		});
+	
+	}
+
+	am4core.ready(function() {
+		getTotalData();
+		getLocalData();
+		getCategoryData();
+	
+	});
+
+	function getTotalData() {
+		
+		$.post(
+			"/api/get/json/total",
+			function(data) {
+				jsonData = data;
+				drawTotalChart(jsonData);
+			},
+			"json"
+		).done(function() {
+		});
+
+	}
+
+	function drawTotalChart(jsonData) {
+		// Themes begin
+// 		am4core.useTheme(am4themes_material);
+		am4core.useTheme(am4themes_animated);
+		// Themes end
+
+		var chart = am4core.create("totalChart", am4charts.PieChart);
+		chart.hiddenState.properties.opacity = 0; // this creates initial fade-in
+		
+		chart.data = jsonData;
+		//positive, negative
+		
+		chart.radius = am4core.percent(70);
+		chart.innerRadius = am4core.percent(40);
+		chart.startAngle = 180;
+		chart.endAngle = 360;  
+
+		var series = chart.series.push(new am4charts.PieSeries());
+		series.dataFields.value = "count";
+		series.dataFields.category = "sentiment";
+
+		series.slices.template.cornerRadius = 10;
+		series.slices.template.innerCornerRadius = 7;
+		series.slices.template.draggable = true;
+		series.slices.template.inert = true;
+		series.alignLabels = false;
+
+		series.hiddenState.properties.startAngle = 90;
+		series.hiddenState.properties.endAngle = 90;
+
+		chart.legend = new am4charts.Legend();
+	}
+
+	function getLocalData() {
+		
+		$.post(
+			"/api/get/json/local",
+			function(data) {
+				jsonData = data;
+				drawLocalChart(jsonData);
+			},
+			"json"
+		).done(function() {
+		});
+
+	}
+
+	function drawLocalChart(jsonData) {
+		// Themes begin
+		am4core.useTheme(am4themes_kelly);
+		am4core.useTheme(am4themes_animated);
+		// Themes end
+	
+		 // Create chart instance
+		var chart = am4core.create("localChart", am4charts.XYChart);
+	
+		// Add data
+		chart.data = jsonData;
+	
+		// Create axes
+		var categoryAxis = chart.yAxes.push(new am4charts.CategoryAxis());
+		categoryAxis.dataFields.category = "local";
+		categoryAxis.numberFormatter.numberFormat = "#";
+		categoryAxis.renderer.inversed = true;
+		categoryAxis.renderer.grid.template.location = 0;
+		categoryAxis.renderer.cellStartLocation = 0.1;
+		categoryAxis.renderer.cellEndLocation = 0.9;
+	
+		var  valueAxis = chart.xAxes.push(new am4charts.ValueAxis()); 
+		valueAxis.renderer.opposite = true;
+	
+		// Create series
+		function createSeries(field, name) {
+		  var series = chart.series.push(new am4charts.ColumnSeries());
+		  series.dataFields.valueX = field;
+		  series.dataFields.categoryY = "local";
+		  series.name = name;
+		  series.columns.template.tooltipText = "{name}: [bold]{valueX}[/]";
+		  series.columns.template.height = am4core.percent(100);
+		  series.sequencedInterpolation = true;
+	
+		  var valueLabel = series.bullets.push(new am4charts.LabelBullet());
+		  valueLabel.label.text = "{valueX}";
+		  valueLabel.label.horizontalCenter = "left";
+		  valueLabel.label.dx = 10;
+		  valueLabel.label.hideOversized = false;
+		  valueLabel.label.truncate = false;
+	
+		  var categoryLabel = series.bullets.push(new am4charts.LabelBullet());
+		  categoryLabel.label.text = "{name}";
+		  categoryLabel.label.horizontalCenter = "right";
+		  categoryLabel.label.dx = -10;
+		  categoryLabel.label.fill = am4core.color("#fff");
+		  categoryLabel.label.hideOversized = false;
+		  categoryLabel.label.truncate = false;
+		}
+	
+		createSeries("positive", "긍정");
+		createSeries("negative", "부정");
+	}
+
+	function getCategoryData() {
+		
+		$.post(
+			"/api/get/json/category",
+			function(data) {
+				jsonData = data;
+				drawCategoryChart(jsonData);
+			},
+			"json"
+		).done(function() {
+		});
+
+	}
+	
+	function drawCategoryChart(jsonData) {
+		// Themes begin
+		am4core.useTheme(am4themes_material);
+		am4core.useTheme(am4themes_animated);
+		// Themes end
+	
+		 // Create chart instance
+		var chart = am4core.create("categoryChart", am4charts.XYChart);
+	
+		// Add data
+		chart.data = jsonData;
+	
+		// Create axes
+		var categoryAxis = chart.yAxes.push(new am4charts.CategoryAxis());
+		categoryAxis.dataFields.category = "category";
+		categoryAxis.numberFormatter.numberFormat = "#";
+		categoryAxis.renderer.inversed = true;
+		categoryAxis.renderer.grid.template.location = 0;
+		categoryAxis.renderer.cellStartLocation = 0.1;
+		categoryAxis.renderer.cellEndLocation = 0.9;
+	
+		var  valueAxis = chart.xAxes.push(new am4charts.ValueAxis()); 
+		valueAxis.renderer.opposite = true;
+	
+		// Create series
+		function createSeries(field, name) {
+		  var series = chart.series.push(new am4charts.ColumnSeries());
+		  series.dataFields.valueX = field;
+		  series.dataFields.categoryY = "category";
+		  series.name = name;
+		  series.columns.template.tooltipText = "{name}: [bold]{valueX}[/]";
+		  series.columns.template.height = am4core.percent(100);
+		  series.sequencedInterpolation = true;
+	
+		  var valueLabel = series.bullets.push(new am4charts.LabelBullet());
+		  valueLabel.label.text = "{valueX}";
+		  valueLabel.label.horizontalCenter = "left";
+		  valueLabel.label.dx = 10;
+		  valueLabel.label.hideOversized = false;
+		  valueLabel.label.truncate = false;
+	
+		  var categoryLabel = series.bullets.push(new am4charts.LabelBullet());
+		  categoryLabel.label.text = "{name}";
+		  categoryLabel.label.horizontalCenter = "right";
+		  categoryLabel.label.dx = -10;
+		  categoryLabel.label.fill = am4core.color("#fff");
+		  categoryLabel.label.hideOversized = false;
+		  categoryLabel.label.truncate = false;
+		}
+	
+		createSeries("positive", "긍정");
+		createSeries("negative", "부정");
+	}
+</script>
+
+
+	<div class="title-section">
+		  <span class="line"></span>
+		  <span class="dot"></span>
+		  <span class="title">
+		    <h4>세종시 업체 감성 분석 정보</h4>
+		  </span>
+		  <span class="dot"></span>
+		  <span class="line"></span>
+	</div>
+		
+	<div class="analysis-info">
+		
+			<span>데이터 수집일: 2019-01-01 ~ 2019-11-01 (2019-11-01 기준)</span>
+		</div>
+		
+		<section id="local-chart" class="chart-section">
+			
+			<div class="row">
+				<div id="chart-0" class="half-section cell">
+					<h1>세종시 업체에 대한 긍부정</h1>
+					<div id="totalChart">
+					</div>
+				</div>
+				
+				<div id="rank-chart" class="half-section cell-right">
+					<h1>세종시 업체 선호도</h1> 
+					(연관 감성어 30개 이상 기준)</br>
+				</div>
+			</div>
+			
+			<div id="chart-2" class="whole-section">
+				
+				<h1>세종시 업종별 업체 긍부정 비교</h1>
+			
+				<div id="categoryChart"></div>
+			</div>
+			
+			<div id="chart-2" class="whole-section">
+				
+				<h1>세종시 동네별 업체 긍부정 비교</h1>
+			
+				<div id="localChart"></div>
+			</div>
+			
+		</section>
+	
+	
+	<div class="DS_copy">
+			<span>
+				SubinKim@Daumsoft_2019_10_2nd_week
+			</span>
+		</div>
+
+</section>
+
+
+
+</body>
+</html>

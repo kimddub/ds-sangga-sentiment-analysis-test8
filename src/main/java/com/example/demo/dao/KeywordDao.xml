@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- XML mapper dtd 등록 -->
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+<mapper namespace="com.example.demo.dao.KeywordDao">
+	<insert id="insert" parameterType="java.util.List">
+	    INSERT INTO tb_sns_index_analysis 
+	    (register_date,sns_type,positive_count,negative_count,neutral_count)
+	    VALUES
+	    <foreach collection="list" item="row" separator=" , " >
+	    	
+	    	(
+	    	<foreach collection="row.entrySet()" item="value" separator=" , " >
+	        	"${value}"
+	    	</foreach>
+	        )
+	    </foreach>
+	</insert>
+	
+	<insert id="insertToMonthlyTable" parameterType="java.util.List">
+	    INSERT INTO monthly_tb_sns_index_analysis 
+	    (register_date,sns_type,positive_count,negative_count,neutral_count)
+	    VALUES
+	    <foreach collection="list" item="row" separator=" , " >
+	    	
+	    	(
+	    	<foreach collection="row.entrySet()" item="value" separator=" , " >
+	        	"${value}"
+	    	</foreach>
+	        )
+	    </foreach>
+	</insert>
+	
+	<select id="selectTotal" resultMap="total_analysis"> 
+		SELECT sum(positive_count) as positive_count, 
+			sum(negative_count) as negative_count, 
+			sum(neutral_count) as neutral_count
+		FROM monthly_tb_sns_index_analysis
+	</select> 
+	
+	<select id="select" resultMap="tb_sns_index_analysis"> 
+		SELECT * 
+		FROM tb_sns_index_analysis
+	</select> 
+	
+	<select id="selectMonthlyData" resultMap="tb_sns_index_analysis"> 
+		SELECT * 
+		FROM monthly_tb_sns_index_analysis
+	</select>
+	
+	<update id="truncate"> 
+		TRUNCATE tb_sns_index_analysis
+	</update> 
+
+	<update id="truncateToMonthlyTable"> 
+		TRUNCATE monthly_tb_sns_index_analysis
+	</update> 
+	
+	<resultMap id="tb_sns_index_analysis" type="map"> 
+		<result property="date" column="register_date" />
+		<result property="snsType" column="sns_type" />
+		<result property="positive" column="positive_count" />
+		<result property="negative" column="negative_count" /> 
+		<result property="neutral" column="neutral_count" /> 
+	</resultMap>
+	
+	<resultMap id="total_analysis" type="map"> 
+		<result property="긍정" column="positive_count" />
+		<result property="부정" column="negative_count" /> 
+		<result property="중립" column="neutral_count" /> 
+	</resultMap>
+
+</mapper>

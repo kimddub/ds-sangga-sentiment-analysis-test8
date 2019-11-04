@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- XML mapper dtd 등록 -->
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+<mapper namespace="com.example.demo.dao.TM2Dao">
+
+	<select id="getSanggaMasterList" resultMap="sanggaMaster">
+		SELECT sns_type, keyword, keyword_id, include, `exclude`
+		FROM sangga_keyword_master 
+	</select>
+	
+	<select id="getKeywordInfo" parameterType="string" resultMap="keywordInfo">
+		SELECT S.id, S.place_name, S.address_refined, S.hd_emd_name, 
+			(SELECT nice_category1_name
+			FROM category
+			WHERE nice_category1_code = S.nice_category1_code
+			LIMIT 1)  AS nice_category1_name,
+			(SELECT SUM(positive_count) + SUM(negative_count) + SUM(neutral_count)
+			FROM sangga_sentiment_analysis
+			WHERE keyword = #{keyword}) AS sentiment_count
+		FROM sangga AS S
+		WHERE S.place_name = #{keyword}
+	</select>
+
+	<select id="getSanggaInfo" parameterType="integer" resultMap="sanggaInfo">
+		SELECT S.hd_emd_name, S.hd_emd_code, S.nice_category1_code, 
+			(SELECT nice_category1_name
+			FROM category
+			WHERE nice_category1_code = S.nice_category1_code
+			LIMIT 1)  AS nice_category1_name
+		FROM sangga AS S
+		WHERE S.id = #{id}
+	</select>
+	
+	<select id="getKeywordSentimentData" parameterType="string" resultMap="keywordSentimentData">
+		SELECT sns_type, 
+			keyword, 
+			hd_emd_name, 
+			nice_category1_name, 
+			positive_count,
+			negative_count,
+			neutral_count,
+			ROUND(AVG(sentiment_score),2) as `score`,
+			date_format(register_date, '%m') as `month`
+		FROM sangga_sentiment_analysis
+		WHERE keyword = #{keyword}
+		GROUP BY `month`
+	</select>
+	
+	<select id="getCategoryData" resultMap="categoryData">
+		SELECT nice_category1_name, SUM(positive_count) AS positive, SUM(negative_count) AS negative
+		FROM sangga_sentiment_analysis
+		GROUP BY nice_category1_name
+	</select>
+	
+	<select id="getLocalData" resultMap="localData">
+		SELECT hd_emd_name, sum(positive_count) as positive, sum(negative_count) as negative
+		FROM sangga_sentiment_analysis
+		GROUP BY hd_emd_name
+	</select>
+	
+	<select id="getLocalSentimentData" parameterType="string" resultMap="localSentimentData">
+		SELECT hd_emd_name, round(avg(sentiment_score),2) as score, date_format(register_date, '%m') as `month`
+		FROM sangga_sentiment_analysis
+		WHERE hd_emd_name = '보람동'
+		GROUP BY `month`
+	</select>
+	
+	<select id="getTotalData" parameterType="string" resultMap="totalData">
+		SELECT sum(positive_count) as positive,sum(negative_count) as negative
+		FROM sangga_sentiment_analysis
+	</select>
+	
+	<select id="getKeywordTotalData" parameterType="string" resultMap="totalData">
+		SELECT sum(positive_count) as positive,sum(negative_count) as negative
+		FROM sangga_sentiment_analysis
+		WHERE keyword = #{keyword}
+	</select>
+	
+	<select id="getTotalCompareData" parameterType="string" resultMap="totalCompareData">
+		SELECT keyword, ROUND(AVG(sentiment_score),2) AS score 
+		FROM sangga_sentiment_analysis
+		WHERE keyword = #{keyword}
+		UNION ALL
+		SELECT (SELECT '세종 업체 평균'), ROUND(AVG(sentiment_score),2)
+		FROM sangga_sentiment_analysis
+	</select>
+	
+	<select id="getKeywordRank" resultMap="keywordRank">
+		SELECT distinct(keyword), round(avg(sentiment_score),2) as score, SUM(positive_count) + SUM(negative_count) + SUM(neutral_count) as `count`
+		FROM sangga_sentiment_analysis
+		GROUP BY keyword_id
+		HAVING `count` > 30
+		ORDER BY score desc, `count` DESC
+		LIMIT 5
+	</select>
+	
+	<insert id="insertSentimentData" parameterType="list">
+		INSERT INTO sangga_sentiment_analysis
+		(sns_type,keyword_id,keyword,hd_emd_name,hd_emd_code,nice_category1_code,nice_category1_name,positive_count,negative_count,neutral_count,sentiment_score,register_date)
+		VALUES
+		<foreach collection="list" item="row" separator=" , " >
+	    	(#{row.sns},
+			#{row.keywordId},
+			#{row.keyword},
+			#{row.hdName},
+			#{row.hdCode},
+			#{row.categoryCode},
+			#{row.categoryName},
+			#{row.positive},
+			#{row.negative},
+			#{row.neutral},
+			#{row.sentimentScore},
+			#{row.regDate})
+	    </foreach>
+	    ON DUPLICATE KEY UPDATE 
+			sns_type = VALUES(sns_type),
+			keyword_id = VALUES(keyword_id),
+			register_date = VALUES(register_date)
+	</insert>
+	
+	<select id="checkUniqueKeyword" parameterType="string" resultType="integer">
+		SELECT COUNT(distinct(address_refined))
+		FROM sangga
+		WHERE place_name = #{keyword}
+	</select>
+	
+	<resultMap id="keywordRank" type="map"> 
+		<result property="keyword" column="keyword" /> 
+		<result property="score" column="score" />
+		<result property="count" column="count" />
+	</resultMap>
+	
+	<resultMap id="keywordInfo" type="map"> 
+		<result property="id" column="id" /> 
+		<result property="keyword" column="place_name" />
+		<result property="address" column="address_refined" />
+		<result property="hdName" column="hd_emd_name" />
+		<result property="category" column="nice_category1_name" />
+		<result property="sentimentCount" column="sentiment_count" />
+	</resultMap>
+	
+	<resultMap id="localSentimentData" type="map"> 
+		<result property="local" column="hd_emd_name" /> 
+		<result property="score" column="score" />
+		<result property="month" column="month" />
+	</resultMap>
+	
+	<resultMap id="categoryData" type="map"> 
+		<result property="category" column="nice_category1_name" /> 
+		<result property="positive" column="positive" /> 
+		<result property="negative" column="negative" />
+	</resultMap>
+	
+	<resultMap id="localData" type="map"> 
+		<result property="local" column="hd_emd_name" /> 
+		<result property="positive" column="positive" /> 
+		<result property="negative" column="negative" />
+	</resultMap>
+	
+	<resultMap id="totalData" type="map"> 
+		<result property="positive" column="positive" /> 
+		<result property="negative" column="negative" />
+	</resultMap>
+	
+	<resultMap id="totalCompareData" type="map"> 
+		<result property="keyword" column="keyword" /> 
+		<result property="score" column="score" />
+	</resultMap>
+	
+	<resultMap id="keywordSentimentData" type="map"> 
+		<result property="sns" column="sns_type" />
+		<result property="keyword" column="keyword" /> 
+		<result property="hdName" column="hd_emd_name" />
+		<result property="categoryName" column="nice_category1_name" />
+		<result property="positive" column="positive_count" /> 
+		<result property="negative" column="negative_count" />
+		<result property="neutral" column="neutral_count" />
+		<result property="score" column="score" />
+		<result property="month" column="month" />
+	</resultMap>
+	
+	<resultMap id="sanggaMaster" type="map"> 
+		<result property="sns" column="sns_type" />
+		<result property="keyword" column="keyword" /> 
+		<result property="keywordId" column="keyword_id" /> 
+		<result property="include" column="include" /> 
+		<result property="exclude" column="exclude" />
+	</resultMap>
+
+	<resultMap id="sanggaInfo" type="map"> 
+		<result property="hdName" column="hd_emd_name" />
+		<result property="hdCode" column="hd_emd_code" /> 
+		<result property="categoryCode" column="nice_category1_code" /> 
+		<result property="categoryName" column="nice_category1_name" />
+	</resultMap>
+</mapper>

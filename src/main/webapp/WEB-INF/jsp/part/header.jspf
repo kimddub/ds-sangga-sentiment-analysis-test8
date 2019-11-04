@@ -1,0 +1,262 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8"%>
+<%@ page import="java.util.*"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn"%>
+
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>DaumSoft</title>
+
+<link rel="stylesheet" href="/css/lib/lib.css">
+<link rel="stylesheet" href="/css/app/app.css"><link rel="stylesheet"
+	href="https://use.fontawesome.com/releases/v5.3.1/css/all.css"
+	integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU"
+	crossorigin="anonymous">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+<!-- <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> -->
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
+<!-- Resources -->
+<script src="https://www.amcharts.com/lib/4/core.js"></script>
+<script src="https://www.amcharts.com/lib/4/charts.js"></script>
+<script src="https://www.amcharts.com/lib/4/themes/material.js"></script>
+<script src="https://www.amcharts.com/lib/4/themes/dataviz.js"></script>
+<script src="https://www.amcharts.com/lib/4/themes/kelly.js"></script>
+<script src="https://www.amcharts.com/lib/4/themes/animated.js"></script>
+
+<style>
+	body {
+		background-color:#afafaf;!important
+	}
+	
+	
+	
+	.main-logo	{
+		display:inline-block;
+		box-sizing:border-box;
+		padding:5px;
+		height:70px;
+		cursor:pointer;
+	}
+	
+	.main-logo > img {
+		height:60px;
+	}
+
+	.DS_header {
+	    margin:0;
+	    height:70px;
+	    width:100%;
+	    background-color:#2E4372;
+	    position:fixed;
+	    z-index:999;
+	}
+	.DS_term {
+	    height:70px;
+	}
+	
+	.DS_main {
+		background-color:white;
+ 		min-height:100vh; 
+		text-align:center;
+		padding:25px 0;
+	}
+	
+	.DS_bar {
+		height:100%;
+		border:none;
+		background-color:#2E4372;
+		font-weight:bold;
+		font-size:1.1rem;
+		color:#7788AA;
+		text-align:center;
+		box-sizing:border-box;
+	}
+	
+	.main_btn {
+		border:none;
+		border-radius:5px;
+		background-color:#2E4372;
+		font-weight:bold;
+		font-size:1.1rem;
+		color:white;
+		padding:10px 20px;
+	}
+	
+	.main_btn:hover {
+		font-weight:normal;
+	}
+	
+	#search-form {
+		margin:30px auto;
+	}
+	
+	.search-bar {
+		width:60%;
+		border:4px solid #2196F3;
+		outline:none;
+		  height: 44px;
+		  border-radius: 40px;
+		  display: flex;
+		  align-items: center;
+		  padding: 0 0 0 20px;
+		  position: relative;
+		  background: #fff;
+		  margin:0 auto;
+	}
+	
+	.search-bar .input {
+	  border: none;
+	  height: 25px;
+	  width:80%;
+	  color: #1b1b1b;
+	  outline: none;
+		  font-weight:bold;
+		  font-size:17px;
+	}
+	
+	.search-bar .label {
+	  color: #aaaaaa;
+	  position: absolute;
+	  top: 13px;
+	  pointer-events: none;
+	  transition: all 0.5s ease;
+	}
+	
+	.search-bar .search-btn {
+	  background: #4279a3;
+	  border-radius: 20px;
+	  height: 40px;
+	  min-width: 40px;
+	  display: flex;
+	  align-items: center;
+	  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+	  justify-content: center;
+	  cursor: pointer;
+	  right: 2px;
+	  position: absolute;
+	  transition: all 1s ease;
+	}
+	
+	.search-bar .icon {
+	  display: inline-flex;
+	}
+	
+	.search-bar .icon-18 {
+	  width: 18px;
+	  height: 18px;
+	}
+	
+	.DS_copy {
+		margin-top:100px;
+		font-style:oblique;
+	}
+	
+	
+	#localChart {
+	  width: 100%;
+	  height: 1000px;
+	}
+	
+	#categoryChart {
+	  width: 100%;
+	  height: 300px;
+	}
+	
+	#totalChart {
+	  width: 100%;
+	  height:250px;
+	}
+	
+	.chart-section {
+		margin:0 auto;
+		padding:10px;
+		box-sizing:border-box;
+		position:relative;
+	}
+	
+	.chart-section h1 {
+		margin:10px auto;
+	}
+	
+	.whole-section {
+		margin-top:20px;
+		border:1px solid lightgray;
+		border-radius:10px;
+	}
+	
+	.half-section {
+		margin-top:20px;
+		width:calc(48%);
+		border:1px solid lightgray;
+		border-radius:10px;
+		min-height:300px;
+	}
+	
+	.analysis-info {
+		padding:10px;
+		text-align:right;
+		font-style:oblique;
+		color:gray;
+	}
+</style>
+
+<script>
+
+	function doSearch() {
+		var $form = $('#search-form'); 
+
+		//폼체크
+		var keyword = $form.find('.input').val().trim();
+
+		if (keyword.length == 0) {
+			return false;
+		}
+		
+		$form.submit();
+	}
+
+</script>
+
+</head>
+<body style="background-color:#7788AA;">
+	
+	<div class="DS_header"> 
+		
+		<div class="DS_bar realtive">
+			<div class="main-logo" onclick="location.href='../home/main';">
+				<img alt="logo" src="/image/logo2.png">
+			</div>
+		</div>
+		
+	</div>
+	
+	<div class="DS_term"> 
+	</div>
+
+
+	<section class="con DS_main">
+
+		<c:set var="placeholder" value="업체명을 입력해보세요 "/>
+		
+		<c:if test="${keyword != '' && keyword != null}">
+			<c:set var="placeholder" value="${keyword}"/>
+		</c:if>
+		
+		<form id="search-form" action="../api/search" method="POST">
+			<div class="search-bar" style="padding: 0 0 0 20px;">
+			  <input type="text" name="keyword" class="input" placeholder="${placeholder }" >
+			  	<div class="search-btn" onclick="doSearch();">
+		       		<svg class="icon icon-18">
+		        		<use xlink:href="#magnify"></use>
+		    		</svg>
+		    	</div>
+			</div>
+		</form>
+		
+		<p style="color:red;">(추가 예정) 업종 검색, 동네 검색을 통한 월별 지수 변화 차트</p>
